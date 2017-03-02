@@ -7,6 +7,7 @@ use std::env;
 use std::process;
 use std::fs::File;
 
+const STARTUP_ROM_PATH : &'static str = "startup_rom.bin";
 
 fn main() {
 
@@ -41,6 +42,6 @@ fn main() {
 
     println!("Got rom path: {}", rom_path);
 
-    Gameboy::run(&cartridge);
+    Gameboy::run(cartridge);
 
 }
