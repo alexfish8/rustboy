@@ -17,11 +17,6 @@ impl Gameboy {
 
     pub fn run(c: Cartridge) -> Result<(), &'static str> {
 
-        // set up registers and RAM
-        // run initial ROM
-        // make sure to handle re-mapping of cartridge ROM
-        // it should now begin executing
-        let startup_rom = Gameboy::load_startup_rom()?;
         let mut cpu = Cpu::new(c);
         cpu.run();
         Ok(())

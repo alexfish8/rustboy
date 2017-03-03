@@ -1,8 +1,15 @@
 use std::str;
+
+use std::fs::File;
+use std::process;
+use std::io::Read;
+
+use instruction;
 use instruction::Instruction;
 use interrupt::Interrupt;
 use cartridge::Cartridge;
 
+const STARTUP_ROM_PATH : &'static str = "startup_rom.bin";
 const MEMORY_SIZE: usize = 2 << 16;
 const OPCODE_SIZE: usize = 1;
 
@@ -10,9 +17,9 @@ const OPCODE_SIZE: usize = 1;
 type Register = u16;
 
 pub struct Cpu {
-    memory: [u8; MEMORY_SIZE],
-    program_counter: Register,
-    stack_pointer: Register,
+    pub memory: [u8; MEMORY_SIZE], // TODO should this be private, and memory read/written via methods?
+    pub program_counter: Register,
+    pub stack_pointer: Register,
     a: Register,
     f: Register,
     b: Register,
@@ -44,15 +51,30 @@ impl Cpu {
     }
 
     pub fn run(&mut self) -> () {
+        let startup_rom = Self::load_startup_rom().unwrap();
+        assert!(startup_rom.len() <= self.memory.len());
+
+        // map startup rom to memory
+        // TODO need to unmap startup ROM at end
+        for i in 0..startup_rom.len() {
+            self.memory[i] = startup_rom[i];
+        }
 
         loop {
+
+            // TODO need to check to see if interrupts are enabled first
             match self.has_interrupt() {
                 Some(interrupt) => self.handle_interrupt(interrupt),
                 None            => {}
             };
             self.execute_instruction();
         }
+    }
 
+    ///
+    /// Return the program counter as a variable of type usize
+    pub fn pc(&self) -> usize {
+        self.program_counter as usize
     }
 
     fn has_interrupt(&mut self) -> Option<Interrupt> {
@@ -71,23 +93,16 @@ impl Cpu {
     ///
     /// TODO: Handle interrupts
     fn execute_instruction(&mut self) -> () {
-        let op_code = self.memory[self.program_counter as usize];
-        let instruction : Instruction = Self::decode_instruction(op_code);
+        let opcode = self.memory[self.pc()];
+        let instruction = instruction::decode(opcode);
 
-        (instruction.f)(self);
+        (instruction.f)(self); // TODO how to handle arguments to instructions?
 
         // execute instruction
         // update program counter (maybe this should be done by the instruction?)
     }
 
 
-
-    fn decode_instruction(opcode: u8) -> Instruction {
-        Instruction {
-            name: "derp",
-            f: Self::dummy_instr_execution,
-        }
-    }
 
     fn dummy_instr_execution(cpu: &mut Cpu) -> () {
         println!("Sup son");
