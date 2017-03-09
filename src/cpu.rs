@@ -92,7 +92,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(c: Cartridge) -> Cpu {
-        Cpu {
+        let mut cpu = Cpu {
             memory: [0; MEMORY_SIZE],
             program_counter: 0,
             stack_pointer: Register16::new(),
@@ -102,48 +102,41 @@ impl Cpu {
             hl: Register16::new(),
             cartridge: c,
             current_executable: None,
-        }
+        };
 
-    }
-
-    pub fn run(&mut self) -> () {
+        // load the startup rom
         let startup_rom = Self::load_startup_rom().unwrap();
-        assert!(startup_rom.len() <= self.memory.len());
+        assert!(startup_rom.len() <= cpu.memory.len());
 
         // map startup rom to memory
         // TODO need to unmap startup ROM at end
         for i in 0..startup_rom.len() {
-            self.memory[i] = startup_rom[i];
+            cpu.memory[i] = startup_rom[i];
         }
-
-        loop {
-
-            // TODO need to check to see if interrupts are enabled first
-            match self.has_interrupt() {
-                Some(interrupt) => self.handle_interrupt(interrupt),
-                None            => {}
-            };
-            self.execute_instruction();
-        }
+        cpu
     }
 
     ///
     /// Simulate one clock cycle
     pub fn step(&mut self) -> () {
 
+        // todo get logging working
+        println!("CPU step");
         // get something new to execute if not doing anything already
 
         // TODO figure out a more idiomatic way to write this
-        let exists = match self.current_executable {
+        let executing_something = match self.current_executable {
             Some(_) => true,
             None => false,
         };
 
-        if !exists {
+        if !executing_something {
             self.current_executable = match self.has_interrupt() {
                 Some(interrupt)         => Some(Executable::from_interrupt(interrupt)),
                 None                    => {
-                    let instruction = instruction::decode(0); // TODO use the actual opcode
+                    let opcode = self.memory[self.program_counter];
+                    println!("Decoding new instruction: opcode={:x}", opcode);
+                    let instruction = instruction::decode(opcode); // TODO use the actual opcode
                     Some(Executable::from_instruction(instruction))
                 },
             };
@@ -164,7 +157,9 @@ impl Cpu {
 
         // TODO figure out way to consolidate this and the previous function
         if let Some(execute_fn) = execute_fn {
-            (execute_fn)(self)
+            println!("Instruction cycles hit, executing instruction");
+            (execute_fn)(self);
+            self.current_executable = None;
         }
 
     }
@@ -184,21 +179,6 @@ impl Cpu {
         // maybe the interrupt handling logic should be implemented as a function in the interrupt itself?
     }
 
-
-
-    /// Fetches the instruction pointed to by the program counter, decodes it, executes it,
-    /// and updates the program counter accordingly
-    ///
-    /// TODO: Handle interrupts
-    fn execute_instruction(&mut self) -> () {
-        let opcode = self.memory[self.pc()];
-        let instruction = instruction::decode(opcode);
-
-        (instruction.f)(self); // TODO how to handle arguments to instructions?
-
-        // execute instruction
-        // update program counter (maybe this should be done by the instruction?)
-    }
 
 
 
