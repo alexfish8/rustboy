@@ -11,14 +11,29 @@ use std::ops::Index;
 
 use cpu::Cpu;
 use cartridge::Cartridge;
+use lcd::Lcd;
+
+pub struct Clock {
+
+}
+
+const CLOCK_FREQUENCY : f32 = 4.194304e6; // TODO let this be configured by the user
 
 pub struct Gameboy;
 impl Gameboy {
-
     pub fn run(c: Cartridge) -> Result<(), &'static str> {
-
         let mut cpu = Cpu::new(c);
-        cpu.run();
+        let mut lcd = Lcd::new();
+
+        let mut cycles = 0;
+
+        while true {
+            cpu.step();
+            lcd.step();
+            // wait some amount of time to handle the clock
+
+        }
+
         Ok(())
     }
 
